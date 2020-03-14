@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">HealthCare</string>
+    <string name="enter_username">Enter Username</string>
+    <string name="enter_password">Enter Password</string>
+    <string name="login">Login</string>
+    <string name="not_registered">Not Registered</string>
+</resources>
