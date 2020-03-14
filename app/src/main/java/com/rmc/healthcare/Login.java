@@ -1,117 +1,133 @@
 package com.rmc.healthcare;
-
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Patterns;
+import android.text.Html;
+import android.text.Spanned;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
+
 
 public class Login extends AppCompatActivity {
 
-    EditText uname,pass;
-    BackgroundTask bt;
-    SharedPreferences preferences;
-    SharedPreferences.Editor editor;
+    //Declaration EditTexts
+    EditText user;
+    EditText pass;
+    Button Button2;
+    //Declaration SqliteHelper
+    SqliteHelper sqliteHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        sqliteHelper = new SqliteHelper(this);
+        initCreateAccountTextView();
+        initViews();
 
+        //set click event of login button
+        Button2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
 
-        uname = findViewById(R.id.edt_name);
-        pass = findViewById(R.id.edt_pass);
-        preferences = getSharedPreferences("HealthCom", MODE_PRIVATE);
-        editor = preferences.edit();
+                //Check user input is correct or not
+                if (validate()) {
 
-        if(!preferences.getString("uid", "").equals(""))
-        {
-            String fg = preferences.getString("flag","not");
-            if(fg.equals("1"))
-            {
-                startActivity(new Intent(getApplicationContext(), Patient_Home.class));
-                finish();
+                    //Get values from EditText fields
+                    String Email = user.getText().toString();
+                    String Password = pass.getText().toString();
+
+                    //Authenticate user
+                    User currentUser = sqliteHelper.Authenticate(new User(null, null, Email, Password));
+
+                    //Check Authentication is successful or not
+                    if (currentUser != null) {
+                        Toast.makeText(Login.this,"success",Toast.LENGTH_SHORT).show();
+
+                        //User Logged in Successfully Launch You home screen activity
+                       /* Intent intent=new Intent(LoginActivity.this,HomeScreenActivity.class);
+                        startActivity(intent);
+                        finish();*/
+                    } else {
+
+                        //User Logged in Failed
+                        Toast.makeText(Login.this,"Login Failed",Toast.LENGTH_SHORT).show();
+
+                    }
+                }
             }
-            if(fg.equals("2"))
-            {
-                startActivity(new Intent(getApplicationContext(), Hospital_Home.class));
-                finish();
-            }
-            else
-            {
-                Toast.makeText(this, "Something went wrong..", Toast.LENGTH_SHORT).show();
-            }
-        }
+        });
 
 
     }
 
-    public void goRegister(View view) {   //for registration if user not exist .....
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Register Your self As");
-        builder.setMessage("");
-
-        builder.setPositiveButton("Patient", new DialogInterface.OnClickListener() {
+    private void initCreateAccountTextView() {
+        TextView textViewCreateAccount = (TextView) findViewById(R.id.not_register);
+        textViewCreateAccount.setText(fromHtml("<font color='#ffffff'>I don't have account yet. </font><font color='#0c0099'>create one</font>"));
+        textViewCreateAccount.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(DialogInterface dialog, int which) {
-                startActivity(new Intent(getApplicationContext(),Registration_patient.class));   //open web view for register patient
+            public void onClick(View view) {
+                Intent intent = new Intent(Login.this, Registration_hospital.class);
+                startActivity(intent);
             }
         });
-        builder.setNeutralButton("Hospital",  new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                startActivity(new Intent(getApplicationContext(),Registration_hospital.class));  //open web view for register Hospital
-            }
-        });
-
-        // create and show the alert dialog
-        AlertDialog dialog = builder.create();
-        dialog.show();
     }
 
-    public void checkUserLogin(View view) {
-        if(!(Patterns.EMAIL_ADDRESS.matcher(uname.getText().toString()).matches() && !pass.getText().toString().equals("")))
-        {
-            Toast.makeText(this, "Check User Name and Password it's not valid", Toast.LENGTH_SHORT).show();
-            return;
+    //this method is used to connect XML views to its Objects
+    private void initViews() {
+        user = (EditText) findViewById(R.id.edt_name);
+        pass = (EditText) findViewById(R.id.edt_pass);
+        Button2 = (Button) findViewById(R.id.button2);
+
+    }
+
+    //This method is for handling fromHtml method deprecation
+    @SuppressWarnings("deprecation")
+    public static Spanned fromHtml(String html) {
+        Spanned result;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            result = Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY);
+        } else {
+            result = Html.fromHtml(html);
         }
-        bt = new BackgroundTask(new BackgroundTask.AsyncResponse() {
-            @Override
-            public void processFinish(String output) {
-                System.out.println("xxxxxxxxxoot "+output);
-                String[] st = output.split(" ");
-                output = st[0];
-                System.out.println("foocoo: "+st);
-                if(output.equals("1") ) {
-                    editor.putString("uid", st[1]);
-                    editor.putString("flag",st[0]);
-                    editor.commit();
-                    startActivity(new Intent(getApplicationContext(), Patient_Home.class));
-                    finish();
-                    return;
-                }
-                if(output.equals("2")) {
-                    editor.putString("uid", st[1]);
-                    editor.putString("flag",st[0]);
-                    editor.commit();
-                    startActivity(new Intent(getApplicationContext(), Hospital_Home.class));
-                    finish();
-                    return;
-                }
-                if(output.equals("0")) {
-                    Toast.makeText(Login.this, "Username or Password note Valid", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                Toast.makeText(Login.this, "Please Check Your Internet Connection", Toast.LENGTH_SHORT).show();
-                bt=null;
+        return result;
+    }
+
+    //This method is used to validate input given by user
+    public boolean validate() {
+        boolean valid = false;
+
+        //Get values from EditText fields
+        String Email = user.getText().toString();
+        String Password = pass.getText().toString();
+
+        //Handling validation for Email field
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(Email).matches()) {
+            valid = false;
+            user.setError("Please enter valid email!");
+        } else {
+            valid = true;
+            user.setError(null);
+        }
+
+        //Handling validation for Password field
+        if (Password.isEmpty()) {
+            valid = false;
+            pass.setError("Please enter valid password!");
+        } else {
+            if (Password.length() > 5) {
+                valid = true;
+                pass.setError(null);
+            } else {
+                valid = false;
+                pass.setError("Password is to short!");
             }
-        });
-        bt.execute("login",uname.getText().toString(),pass.getText().toString());
+        }
+
+        return valid;
     }
 }
